@@ -1,0 +1,9 @@
+CBR_Enclave_Filter.so
+{
+    global:
+        g_global_data_sim;
+        g_global_data;
+        CBR_Enclave_Filter_entry;
+    local:
+        *;
+};

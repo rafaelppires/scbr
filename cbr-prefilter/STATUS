@@ -1,0 +1,25 @@
+######################################################################
+# CODE STATUS
+
+0) Stats on subscriptions
+=> OK
+
+1) Naive matching
+- Nb. tests = nb. subscriptions
+- No need to implement
+=> OK
+
+2) Containment-based
+=> OK
+
+3) Pre-filtering w/ all bits and no containment
+- Vary #bits, #hashes
+=> OK
+
+4) Pre-filtering w/ single bit and no containment
+- Vary #bits, #hashes
+=> OK
+
+5) Pre-filtering w/ all bits and containment
+- Vary #bits, #hashes
+=> OK

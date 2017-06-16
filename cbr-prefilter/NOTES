@@ -1,0 +1,265 @@
+We have a scalable architecture with which we can easily parallelize matching
+Hence, we should:
+- Optimize for the fast path (simple cases)
+- Use natural scalability for parallelizing the slow path (complex cases)
+
+1) Unencrypted subscriptions/events (fast path)
+===============================================
+
+If subscriptions and events are not encrypted, we cannot do much better than classical approaches from the literature, such as:
+- Matching trees ([PODC-1999])
+- Counting algorithms ([SIGCOMM-2003])
+At best, one can provide efficient parallel implementations of these algorithms, such as:
+- Pre-processing and partitioning subscriptions [DEBS-2005]
+- Exploiting Bloom filters [DEBS-2008]
+- Parallelizing filtering [DEBS-2009]
+- Exploiting GPUs [DEBS-2011]
+
+These approaches require building (sophisticated) data structures representing the set of predicated contained in all subscriptions, and traversing these structures each time an event arrives. The matching time is sublinear in the number of subscriptions.
+
+2) Schema known a priori (fast path)
+====================================
+
+We assume that each schema (i.e., set of possible name/type/value tuples in events) can be mapped to a "topic" identified by a unique identifier. If the schema is known a priory, we can naturally cluster subscriptions and events.
+
+3) Speeding up the slow path
+============================
+
+If subscriptions/events are encrypted, or when dealing with complex filters, we might have no better choice than sequential match of events against subscriptions. Techniques that might help are:
+- Discovering containment relationships between subscriptions (either at the level of the complete subscription, or the individual fields)
+- Pre-filtering to quickly eliminate subscriptions that are known not to match
+- Detecting which fields have predicates associated, e.g., to cluster subscriptions according to their fields
+
+We can implement a pre-filtering stage that performs these optimizations. The idea would be to simply embed Bloom filters in events and subscriptions to quickly discard subscriptions before resorting to sequential matching.
+
+Arguably, Bloom filters could be used with encrypted subscriptions/events without revealing much information, especially when using small Bloom filters with sufficiently many collisions.
+
+Ideally, by using 128-bit Bloom filters, one can use SSE instructions for faster filtering.
+
+3a) Presence/absence of filter on some field
+--------------------------------------------
+
+We can use simple Bloom filters to quickly determine which fields should be matched (for dispatching).
+
+Example:
+  E = {x=1, y=2, z=3}
+  S = {x==1 AND y>0}
+  B(S) = B(x)|B(y)
+
+If B(S)&B(z)!=B(z), we know that there is no predicate on z in S. Otherwise, there is likely a predicate on z (unless we have a false positive). We can use this information to dispatch the event to different processors or FSMs.
+
+3b) Equality tests for values
+-----------------------------
+
+We can use simple Bloom filters to quickly eliminate non-matching subscriptions (filtering by discarding).
+
+Example:
+  E = {x=1, y=2, z=3}
+  S = {x==1 AND y==2 AND z>0}
+  B(E) = B(1)|B(2)|B(3)
+  B(S) = B(1)|B(0)
+
+If B(E)&B(S)!=B(S), we know that S does not match E, irrespective of the other (non-equality) predicates.
+
+Note: we could also have one BF per field (e.g., B(S.x) = B(1), B(E.x) = B(1)) but that would be more costly and would require knowing the fields in advance.
+
+3c) String operations
+---------------------
+
+We can encode (sequence of) characters in Bloom filters for string matching (substring, prefix, suffix). This would allow for quick discarding of non-matching subscriptions. This is based on classical n-grams techniques.
+
+Example:
+  E = {x="Hello"}
+  S = {x.contains("ell")}
+  B(E.x) = B("^H")|B("He")|B("el")|B("ll")|B("lo")|B("o$")
+  B(S) = B("el")|B("ll")
+
+In theory, we could merge this Bloom filter with that of 3b) above, but this would probably create too many collisions.
+
+Note: we could also encode individual letters, or longer sequences, or use a hybrid approach in which the hash functions encode different parts of the sequences. For instance, given n hash functions H1, ..., Hn, one could have B("He") = H1("H")|H2("He")|...|Hn-1("He")|Hn("e").
+
+3d) Tuning speed vs. accuracy
+
+Obviously, using small Bloom filters will provide faster but less accurate filtering than large Bloom filters. We can use a 2-level (hierarchical) approach in which we have different sizes of Bloom filters. If the test with the small Bloom filter indicates a possible match, we test the larger one. This approach can be generalized to more levels than two.
+
+By organizing subscriptions according to which bits are set in their Bloom filters, one can hopefully significantly speed up the pre-filtering stage. Some ideas are proposed in a companion document.
+
+4) Exploiting containment
+=========================
+
+When matching subscriptions, one can exploit containment relationships to avoid unnecessary tests. We consider two types of containment:
+- BF-containment: detected at the level of bloom filters
+- ASPE-containment: detected at the level of the ASPE library
+
+BF-containment is very cheap but will yield false positives while ASPE-containment is accurate but slow. Interestingly, we have:
+
+  ASPE-contains(S1, S2) => BF-contains(S1, S2)
+
+Note that the converse is not true. It follows that the containment graph of ASPE is a subset of the containment graph of BF.
+
+We suggest maintaining both graphs: the BF-CG and the ASPE-CG. When adding a new subscription S, we would first determine the sets of containers/containees at the level of the BFs. Then, we would only need to search within these sets for containers/containees at the level of ASPE. Obviously, as the containment relationship is transitive, whenever we find a container (containee), its containers (containees) do not need to be tested. Therefore, the order in which tests are performed has an impact on performance: we need to find first the most specific containers and most generic containees. 
+
+When matching an event, the following properties hold:
+
+  BF-contains(S1, S2) AND BF-matches(S2, e) => BF-matches(S1, e)
+  BF-contains(S1, S2) AND !BF-matches(S1, e) => !BF-matches(S2, e)
+  !BF-matches(S1, e) => !ASPE-matches(S1, e)
+
+WARNING: the last property might not hold (e.g., when <= covers =)! Only valid for equality predicates.
+
+These properties can be used to speed up the pre-filtering stage. Once we find a non-BF-matching subscription, we do not need to BF-match nor ASPE-match any of its containees.
+
+Further:
+
+  ASPE-contains(S1, S2) AND ASPE-matches(S2, e) => ASPE-matches(S1, e)
+  ASPE-contains(S1, S2) AND !ASPE-matches(S1, e) => !ASPE-matches(S2, e)
+  ASPE-matches(S1, e) => BF-matches(S1, e)
+
+WARNING: the last property might not hold (e.g., when <= covers =)! Only valid for equality predicates.
+
+These properties can be used to speed up the (pre-)filtering stage when defaulting to ASPE tests for candidate subscriptions. Once we find an ASPE-matching subscription, we do not need to BF-match nor ASPE-match any of its containers.
+
+As the pre-filtering stage works by discarding subscriptions, we should BF-match subscriptions starting by the most generic ones (containers) so that, upon discarding a subscriptions, we can also trivially discard all of its containees. This can be achieved by sorting the subscription sets such that no strict containee is located before one of its strict container (this is possible because the strict containment graph has no cycles).
+
+As ASPE-matching is exact, it works both by accepting and discarding subscriptions. Ideally, we would need to find quickly the most specific subscriptions that match and event and the most generic subscriptions that do not match. Finding an optimal traversal order of the graph is not trivial (if the graph were a list, one could use binary search). Random search might work well in practice.
+
+5) Proof-of-concept code
+========================
+
+svn://errakis.unine.ch/home/svn/srt15/code/cbr-prefilter
+
+6) Pseudo-code for containment
+==============================
+
+struct {
+  vector<struct sub *> containers;
+  vector<struct sub *> containees;
+  Subscription *subscription;
+} sub;
+
+vector<struct sub *> S; // All subscriptions
+
+vector<struct sub *> roots; // { s in S | s.containers.empty(); }
+vector<struct sub *> leaves; // { s in S | s.containees.empty(); }
+
+add(struct sub *s) {
+  // Add to whole collection
+  S.add(s);
+  // Create containers/containees lists
+  stack<struct sub *> candidates;
+  candidates.add(roots);
+  while (!candidates.empty()) {
+    struct sub *a = candidates.pop();
+    if (a->subscription.contains(s->subscription)) {
+      s->containers.add(a);
+      s->containers.remove(a->containers); // Only keep closest ancestors
+      candidates.add(a->containees);
+    }
+  }
+  candidates.add(leaves);
+  while (!candidates.empty()) {
+    struct sub *a = candidates.pop();
+    if (s->subscription.contains(a->subscription)) {
+      s->containees.add(a);
+      s->containees.remove(a->containees); // Only keep closest descendants
+      candidates.add(a->containers);
+    }
+  }
+  // Add to containers/containees
+  forall (struct sub *a : s->containers) {
+    a->containees.add(s);
+    leaves.remove(a);
+  }
+  forall (struct sub *d : s->containees) {
+    d->containers.add(s);
+    roots.remove(d);
+  }
+  // Unlink parents and children, if necessary
+  forall (struct sub *d : s->containees) {
+    forall (struct sub *a : s->containers) {
+      d->containers.remove(a);
+      if (d->containers.empty())
+        roots.add(d);
+    }
+  }
+  forall (struct sub *a : s->containers) {
+    forall (struct sub *d : s->containees) {
+      a->containees.remove(d);
+      if (a->containees.empty())
+        leaves.add(e);
+    }
+  }
+  // Add to roots or leaves if necessary
+  if (s->containers.empty())
+    roots.add(s);
+  if (s->containees.empty())
+    leaves.add(s);
+}
+
+remove(struct sub *s) {
+  // Remove from roots or leaves if necessary
+  if (s->containers.empty())
+    roots.remove(s);
+  if (s->containees.empty())
+    leaves.remove(s);
+  // Remove node from graph
+  vector<struct sub *> parents = s->containers;
+  vector<struct sub *> children = s->containees;
+  forall (struct sub *a : s->containers)
+    a->containees.remove(s);
+  forall (struct sub *d : s->containees)
+    d->containers.remove(s);
+  // Link parents and children, if necessary
+  forall (struct sub *a : s->containers) {
+    forall (struct sub *d : s->containees) {
+      if (!descendant(d, a)) // Might be descendant via another subtree
+        a->containees.add(d);
+        d->containers.add(a);
+    }
+  }
+  // Update roots and leaves if necessary
+  forall (struct sub *a : s->containers) {
+    if (s->containees.empty())
+      leaves.remove(s);
+  }
+  forall (struct sub *d : s->containees) {
+    if (s->containers.empty())
+      roots.remove(s);
+  }
+  // Remove from whole collection
+  S.remove(s);
+}
+
+match(event *e) {
+  stack<struct sub *> to_match;
+  set<Subscription *> matched;
+  // Start with roots
+  to_match.add(roots);
+  // Traverse the containment graph
+  while (!to_match.empty()) {
+    struct sub *s = to_match.pop();
+    if (match(e, s)) {
+      matched.add(s->subscription);
+      to_match.push(s->containees);
+    } else {
+      // We could flag all containees (and recursively) as not matching and avoid re-testing them
+    }
+  }
+  notify(e, matched);
+}
+
+References
+==========
+
+[PODC-1999]
+	http://research.microsoft.com/en-us/people/aguilera/matching-podc99.pdf
+[SIGCOMM-2003]
+	http://www.inf.usi.ch/carzaniga/papers/cw_sigcomm03.pdf
+[DEBS-2005]
+	http://systems.cs.princeton.edu/dadi/download/DEBS_rapid_camera.pdf
+[DEBS-2008]
+	http://wwwse.inf.tu-dresden.de/zib/publ/doc/jerzak2008bloom.pdf
+[DEBS-2009]
+	http://padres.msrg.toronto.edu/twiki/pub/Padres/WebHome/PEM-May09.pdf
+[DEBS-2011]
+	http://home.dei.polimi.it/cugola/Papers/debs2011.pdf

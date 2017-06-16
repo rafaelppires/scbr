@@ -1,0 +1,20 @@
+/* CBR_Enclave_Filter.edl - Top EDL file. */
+
+enclave {
+    
+    /* 
+     *  [in]: copy the string buffer to App outside.
+     *  [string]: specifies 'str' is a NULL terminated buffer.
+     */
+    untrusted {
+        void ocall_print([in, string] const char *str);
+        void ocall_added_notify( [in, string] const char *b, [in,size=len] const char *hdr, size_t len );
+    };
+
+
+    trusted {
+    	    public int ecall_CBR_Enclave_Filter_sample();
+            public void ecall_init( int v );
+            public void ecall_add_evt( [in, size=len] const char *e, size_t len);
+    };
+};
