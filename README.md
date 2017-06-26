@@ -1,4 +1,6 @@
+## SCBR 
 
-CBR with filtering phase inside SGX
-More info: https://arxiv.org/abs/1701.04612
+Secure Content-Based Routing: pub/sub with filtering phase inside SGX enclaves
+
+[More info](https://arxiv.org/abs/1701.04612)
 
