@@ -15,5 +15,6 @@ viper::Event *parse_pub( const vector<string> &v );
 viper::Subscription *parse_sub( const vector<string> &v );
 bool parse_pubs(const char *file, vector<viper::Event*> &pubs);
 bool parse_subs(const char *file, vector<viper::Subscription*> &subs);
+void test();
 
 #endif // CBR_HH

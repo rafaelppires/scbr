@@ -9,7 +9,7 @@ LDFLAGS    = -O $(LIBS)
 #LDFLAGS    = -g $(LIBS)
 LDLIBFLAGS = -shared
 
-SRCS = cbr.cc subscription.cc event.cc graph.cc util.cc prefilter.cc
+SRCS = main.cc cbr.cc subscription.cc event.cc graph.cc util.cc prefilter.cc
 OBJS = $(SRCS:.cc=.o)
 BINS = cbr
 
