@@ -1,4 +1,6 @@
-
+#include <stdlib.h>
+#include "cbr.hh"
+#include "prefilter.hh"
 #include <getopt.h>
 #include <sys/time.h>
 
