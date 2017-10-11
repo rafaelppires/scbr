@@ -1,6 +1,7 @@
 #include <message.h>
 #include <sstream>
-#include <crypto.h>
+#undef ENABLE_SGX
+#include <sgx_cryptoall.h>
 #include <cryptopp/base64.h>
 #include <cryptopp/filters.h>
 

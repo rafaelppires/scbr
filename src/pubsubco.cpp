@@ -4,8 +4,14 @@
 #include <cbr.hh>
 #include <pubsubco.h>
 #include <zhelpers.hpp>
-#include <crypto.h>
 #include <utils.h>
+
+#ifdef NONENCLAVE_MATCHING
+#undef ENABLE_SGX
+#else
+#define ENAGLE_SGX
+#endif
+#include <sgx_cryptoall.h>
 
 //------------------------------------------------------------------------------
 unsigned fwdcount = 0;

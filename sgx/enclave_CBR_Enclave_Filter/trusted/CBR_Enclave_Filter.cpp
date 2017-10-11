@@ -1,6 +1,5 @@
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
-#include <sgx_utiles.h>
 
 #ifndef NONENCLAVE_MATCHING
 #include "CBR_Enclave_Filter.h"
@@ -19,7 +18,11 @@ void printf(const char *fmt, ...) {
     va_end(ap);
     ocall_print(buf);
 }
-#endif
+#define ENABLE_SGX
+#else
+#undef ENABLE_SGX
+#endif // ndef NONENCLAVE_MATCHING
+#include <sgx_cryptoall.h>
 //------------------------------------------------------------------------------
 #include "cbr.hh"
 #include "event.hh"

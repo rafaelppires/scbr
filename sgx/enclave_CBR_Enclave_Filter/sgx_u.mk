@@ -52,7 +52,7 @@ endif
 
 # App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
 App_Cpp_Files := $(UNTRUSTED_DIR)/$(TARGET).cpp \
-                 $(addprefix $(SGXCOMM_DIR)/, sgx_initenclave.cpp sgx_errlist.cpp crypto.cpp utils.cpp) \
+                 $(addprefix $(SGXCOMM_DIR)/, sgx_initenclave.cpp sgx_errlist.cpp sgx_cryptoall.cpp utils.cpp) \
                  $(addprefix $(SCBR_SRCS)/, message.cpp pubsubco.cpp) \
                  $(addprefix $(CBRPREFILTER_DIR)/, cbr.cpp prefilter.cpp \
                              graph.cpp util.cpp event.cpp subscription.cpp) \

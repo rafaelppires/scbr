@@ -37,8 +37,8 @@ void ocall_print(const char *str) {
     printf("\033[96m%s\033[0m", str);
 }
 //------------------------------------------------------------------------------
-
-#include <crypto.h>
+#undef ENABLE_SGX
+#include <sgx_cryptoall.h>
 #include <pubsubco.h>
 PubSubCo *pubsub = 0;
 void ocall_added_notify( const char *b, const char *hdr, size_t len ) {
