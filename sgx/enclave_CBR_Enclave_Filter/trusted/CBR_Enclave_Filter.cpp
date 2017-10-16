@@ -10,7 +10,7 @@
  *   Invokes OCALL to display the enclave buffer to the terminal.
  */
 //------------------------------------------------------------------------------
-void printf(const char *fmt, ...) {
+int printf(const char *fmt, ...) {
     char buf[BUFSIZ] = {'\0'};
     va_list ap;
     va_start(ap, fmt);
@@ -92,10 +92,15 @@ void ecall_add_evt( const char * buff, size_t len ) {
     if( len == 0 ) return;
     std::string rawhdr(buff,len); 
 #ifndef PLAINTEXT_MATCHING
+    uint8_t key[16], iv[16];
+    memset(key,0,16); memset(iv,0,16);
+    key[0] = 'a'; key[15] = '5';
+    iv[0] = 'x'; iv[15]= '?';
+
     char recovered[512];
     size_t sz = std::min(len,sizeof(recovered));
-    decrypt( buff, recovered, sz );
-    if( is_cipher(recovered, sz) ) {
+    decrypt_aes128( (const uint8_t*)buff, (uint8_t*)recovered, sz, key, iv );
+    if( is_cipher((const uint8_t*)recovered, sz) ) {
         recovered[ std::min(sz,sizeof(recovered)-1) ] = 0;
         printf("\033[91mSCBR Error: decryption did not give plaintext sz(%d) len(%d) '%s' -> '%s'\033[0m\n", sz, len,rawhdr.c_str(),recovered);
         return;
