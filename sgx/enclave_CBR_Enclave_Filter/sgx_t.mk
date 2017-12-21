@@ -63,7 +63,7 @@ Common_C_Cpp_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -
 CBR_Enclave_Filter_C_Flags := $(Flags_Just_For_C) $(Common_C_Cpp_Flags)
 CBR_Enclave_Filter_Cpp_Flags :=  $(Common_C_Cpp_Flags) -std=c++11 -nostdinc++ -fno-builtin-printf -I$(CBRPREFILTER_DIR) -I$(COMMON_SGX) -DENCLAVESGX
 
-CBR_Enclave_Filter_Cpp_Flags := $(CBR_Enclave_Filter_Cpp_Flags)  -fno-builtin-printf
+CBR_Enclave_Filter_Cpp_Flags := $(CBR_Enclave_Filter_Cpp_Flags)  -fno-builtin-printf -DENCLAVED
 
 CBR_Enclave_Filter_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
@@ -126,6 +126,10 @@ trusted/%.o: trusted/%.cpp
 	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
+trusted/%.o: $(COMMON_SGX)/%.cpp
+	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
+
 $(CBRPREFILTER_DIR)/%.o: $(CBRPREFILTER_DIR)/%.cc
 	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@ 
 	@echo "CXX  <=  $<"
@@ -134,7 +138,7 @@ trusted/%.o: trusted/%.c
 	@$(CC) $(CBR_Enclave_Filter_C_Flags) -c $< -o $@
 	@echo "CC  <=  $<"
 
-CBR_Enclave_Filter.so: trusted/CBR_Enclave_Filter_t.o $(CBR_Enclave_Filter_Cpp_Objects) $(CBR_Enclave_Filter_C_Objects)
+CBR_Enclave_Filter.so: trusted/CBR_Enclave_Filter_t.o $(CBR_Enclave_Filter_Cpp_Objects) $(CBR_Enclave_Filter_C_Objects) trusted/sgx_cryptoall.o
 	@$(CXX) $^ -o $@ $(CBR_Enclave_Filter_Link_Flags)
 	@echo "LINK =>  $@"
 

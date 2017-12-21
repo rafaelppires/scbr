@@ -99,7 +99,7 @@ void ecall_add_evt( const char * buff, size_t len ) {
 
     char recovered[512];
     size_t sz = std::min(len,sizeof(recovered));
-    decrypt_aes128( (const uint8_t*)buff, (uint8_t*)recovered, sz, key, iv );
+    decrypt_aes( AES128, (const uint8_t*)buff, (uint8_t*)recovered, sz, key, iv );
     if( is_cipher((const uint8_t*)recovered, sz) ) {
         recovered[ std::min(sz,sizeof(recovered)-1) ] = 0;
         printf("\033[91mSCBR Error: decryption did not give plaintext sz(%d) len(%d) '%s' -> '%s'\033[0m\n", sz, len,rawhdr.c_str(),recovered);
