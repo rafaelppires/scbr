@@ -10,18 +10,27 @@ OUTDIRS := $(OBJDIR) $(BINDIR) $(LIBDIR)
 
 FORWDIR := src/router/forwarding
 
-all: router tests
+all: scbr tests
 
-router: $(BINDIR)/router
+scbr: $(BINDIR)/scbr
 
-$(BINDIR)/router: | $(BINDIR)
-	@$(MAKE) -C $(FORWDIR) clean all && mv $(FORWDIR)/scbr $@ && mv $(FORWDIR)/*.signed.so $(BINDIR) && rm $(FORWDIR)/*.so
+$(BINDIR)/scbr: | $(BINDIR)
+	@$(MAKE) -C $(FORWDIR) all && mv $(FORWDIR)/scbr $@ && mv $(FORWDIR)/*.signed.so $(BINDIR) && rm $(FORWDIR)/*.so
 
-tests: producer consumer router
+tests: producer consumer scbr
 
-producer:
+producer: $(BINDIR)/producer
 
-consumer:
+SAMPLESDIR      := src/client-samples
+PRODUCEROBJS    := producer.o
+$(BINDIR)/producer: $(addprefix $(OBJDIR)/, $(PRODUCEROBJS)) | $(OBJDIR)
+	@$(CXX) $^ -o $@
+
+consumer: $(BINDIR)/consumer
+
+CONSUMEROBJS    := consumer.o
+$(BINDIR)/consumer: $(addprefix $(OBJDIR)/, $(CONSUMEROBJS)) | $(OBJDIR)
+	@$(CXX) $^ -o $@
 
 test: tests
 
@@ -31,5 +40,6 @@ $(OUTDIRS):
 .PHONY: router tests test all clean
 
 clean:
+	$(MAKE) -C $(FORWDIR) clean
 	rm -rf $(OUTDIRS)
 
