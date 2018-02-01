@@ -7,8 +7,8 @@ SGX_MODE ?= HW
 SGX_PRERELEASE ?=1
 SGX_ARCH ?= x64
 SCBR_SRCS=../../src
-CBRPREFILTER_DIR=../../cbr-prefilter
-COMMON_SGX=../../../sgx_common
+CBRPREFILTER_DIR=../matching
+COMMON_SGX=../../../../sgx_common
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -73,8 +73,8 @@ CBR_Enclave_Filter_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdl
 	-Wl,--defsym,__ImageBase=0 \
 	-Wl,--version-script=trusted/CBR_Enclave_Filter.lds
 
-CBR_Enclave_Filter_Cpp_Objects := $(CBR_Enclave_Filter_Cpp_Files:.cpp=.o)
-CBR_Enclave_Filter_C_Objects := $(CBR_Enclave_Filter_C_Files:.c=.o)
+CBR_Enclave_Filter_Cpp_Objects := $(CBR_Enclave_Filter_Cpp_Files:.cpp=.t.o)
+CBR_Enclave_Filter_C_Objects := $(CBR_Enclave_Filter_C_Files:.c=.t.o)
 
 ifeq ($(EXTRAARGS), plain)
         CBR_Enclave_Filter_Cpp_Flags += -DPLAINTEXT_MATCHING
@@ -122,7 +122,7 @@ trusted/CBR_Enclave_Filter_t.o: ./trusted/CBR_Enclave_Filter_t.c
 	@$(CC) $(CBR_Enclave_Filter_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-trusted/%.o: trusted/%.cpp
+trusted/%.t.o: trusted/%.cpp
 	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
@@ -130,7 +130,7 @@ trusted/%.o: $(COMMON_SGX)/%.cpp
 	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(CBRPREFILTER_DIR)/%.o: $(CBRPREFILTER_DIR)/%.cc
+$(CBRPREFILTER_DIR)/%.t.o: $(CBRPREFILTER_DIR)/%.cc
 	@$(CXX) $(CBR_Enclave_Filter_Cpp_Flags) -c $< -o $@ 
 	@echo "CXX  <=  $<"
 

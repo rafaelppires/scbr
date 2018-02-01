@@ -7,9 +7,9 @@ SGX_MODE ?= HW
 SGX_PRERELEASE ?= 1
 SGX_ARCH ?= x64
 UNTRUSTED_DIR=untrusted
-SCBR_SRCS=../../src
-SGXCOMM_DIR = ../../../sgx_common/
-CBRPREFILTER_DIR=../../cbr-prefilter
+SCBR_SRCS=../glue
+SGXCOMM_DIR = ../../../../sgx_common/
+CBRPREFILTER_DIR=../matching
 TARGET=scbr
 
 ifeq ($(shell getconf LONG_BIT), 32)
@@ -154,7 +154,7 @@ $(CBRPREFILTER_DIR)/%.o : $(CBRPREFILTER_DIR)/%.cc
 	@echo "CXX  <=  $<"
 
 $(TARGET) : $(SamplePreReq)
-	@$(CXX) $^ -o $@ $(App_Link_Flags)
+	$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 
