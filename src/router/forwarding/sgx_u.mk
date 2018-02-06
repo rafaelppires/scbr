@@ -10,6 +10,7 @@ UNTRUSTED_DIR=untrusted
 SCBR_SRCS=../glue
 SGXCOMM_DIR = ../../../../sgx_common/
 CBRPREFILTER_DIR=../matching
+USERLIBDIR=../../user-library
 TARGET=scbr
 
 ifeq ($(shell getconf LONG_BIT), 32)
@@ -53,7 +54,7 @@ endif
 # App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
 App_Cpp_Files := $(UNTRUSTED_DIR)/$(TARGET).cpp \
                  $(addprefix $(SGXCOMM_DIR)/, sgx_initenclave.cpp sgx_errlist.cpp sgx_cryptoall.cpp utils.cpp) \
-                 $(addprefix $(SCBR_SRCS)/, message.cpp pubsubco.cpp) \
+                 $(addprefix $(SCBR_SRCS)/, pubsubco.cpp) \
                  $(addprefix $(CBRPREFILTER_DIR)/, cbr.cpp prefilter.cpp \
                              graph.cpp util.cpp event.cpp subscription.cpp) \
                              # $(wildcard App/TrustedLibrary/*.cpp)
@@ -73,7 +74,7 @@ else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-App_Cpp_Flags := $(App_C_Flags) -std=c++11 -I$(SCBR_SRCS) -I$(SGXCOMM_DIR) -I$(CBRPREFILTER_DIR)
+App_Cpp_Flags := $(App_C_Flags) -std=c++11 -I$(SCBR_SRCS) -I$(SGXCOMM_DIR) -I$(CBRPREFILTER_DIR) -I$(USERLIBDIR)/include
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread 
 
 ifneq ($(SGX_MODE), HW)
@@ -130,33 +131,36 @@ endif
 ######## App Objects ########
 
 $(UNTRUSTED_DIR)/CBR_Enclave_Filter_u.c: $(SGX_EDGER8R) trusted/CBR_Enclave_Filter.edl
-	@cd $(UNTRUSTED_DIR) && $(SGX_EDGER8R) --untrusted ../trusted/CBR_Enclave_Filter.edl --search-path ../trusted --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
+	@cd $(UNTRUSTED_DIR) && $(SGX_EDGER8R) --untrusted ../trusted/CBR_Enclave_Filter.edl --search-path ../trusted --search-path $(SGX_SDK)/include
 
 $(UNTRUSTED_DIR)/CBR_Enclave_Filter_u.o: $(UNTRUSTED_DIR)/CBR_Enclave_Filter_u.c
-	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $< '$(App_C_Flags)'"
+	@$(CC) $(App_C_Flags) -c $< -o $@
 
 $(UNTRUSTED_DIR)/%.o: $(UNTRUSTED_DIR)/%.cpp
-	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ 
 	@echo "CXX  <=  $<"
+	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ 
 
 $(SCBR_SRCS)/%.o : $(SCBR_SRCS)/%.cpp
-	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(SCBR_SRCS)
 	@echo "CXX  <=  $<"
+	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(SCBR_SRCS)
 
 $(SGXCOMM_DIR)/%.o : $(SGXCOMM_DIR)/%.cpp
-	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(SGXCOMM_DIR)
 	@echo "CXX  <=  $<"
+	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(SGXCOMM_DIR)
 
 $(CBRPREFILTER_DIR)/%.o : $(CBRPREFILTER_DIR)/%.cc
-	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(CBRPREFILTER_DIR)
 	@echo "CXX  <=  $<"
+	@$(CXX) $(App_Cpp_Flags) -c $< -o $@ -I$(CBRPREFILTER_DIR)
 
-$(TARGET) : $(SamplePreReq)
-	$(CXX) $^ -o $@ $(App_Link_Flags)
+USERLIB := ../../../lib/libscbr.a
+$(TARGET) : $(SamplePreReq) $(USERLIB)
 	@echo "LINK =>  $@"
+	$(CXX) $^ -o $@ $(App_Link_Flags)
 
+$(USERLIB):
+	@make -C ../../.. lib/$(basename $@)
 
 .PHONY: clean
 

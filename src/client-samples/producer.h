@@ -4,7 +4,7 @@
 #include <event.hh>
 #include <pubsubco.h>
 #include <communication.h>
-#include <crypto.h>
+#include <sgx_cryptoall.h>
 using viper::Event;
 
 class SourceBase {
@@ -29,6 +29,6 @@ public:
     Stats encprofile_; 
 };
 
-#include <source.hpp>
+#include <producer.hpp>
 
 #endif

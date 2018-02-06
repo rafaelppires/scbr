@@ -3,8 +3,8 @@
 #include <sstream>
 #include <cbr.hh>
 #include <pubsubco.h>
-#include <zhelpers.hpp>
 #include <utils.h>
+#include <zhelpers.h>
 
 #ifdef NONENCLAVE_MATCHING
 #undef ENABLE_SGX

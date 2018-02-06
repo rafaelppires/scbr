@@ -1,9 +1,9 @@
 #include <zmq.hpp>
 #include <iostream>
 #include <unistd.h> // for usleep
-#include <zhelpers.hpp>
+#include <zhelpers.h>
 #include <communication_zmq.h>
-#include <source.h>
+#include <producer.h>
 #include <signal.h>
 #include <argp.h>
 //------------------------------------------------------------------------------

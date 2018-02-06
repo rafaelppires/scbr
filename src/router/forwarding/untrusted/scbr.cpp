@@ -58,8 +58,9 @@ struct Arguments {
     int verbose;
 };
 //------------------------------------------------------------------------------
-#include <zhelpers.hpp>
+#include <signal.h>
 #include <utils.h>
+#include <zhelpers.h>
 void ctrlc_handler(int);
 void legacymain( const Arguments &args ) {
 

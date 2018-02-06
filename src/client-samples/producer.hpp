@@ -1,7 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include <utils.h>
-#include <crypto.h>
+#include <sgx_cryptoall.h>
 
 //------------------------------------------------------------------------------
 //template <typename T>

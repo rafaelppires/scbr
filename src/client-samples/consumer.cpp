@@ -1,7 +1,7 @@
 #include <consumer.h>
 #include <message.h>
 #include <sstream>
-#include <crypto.h>
+#include <sgx_cryptoall.h>
 #include <zmq.hpp>
 #include <utils.h>
 #include <fstream>

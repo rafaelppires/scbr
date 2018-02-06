@@ -1,5 +1,5 @@
 #include <communication_zmq.h>
-#include <zhelpers.hpp>
+#include "zhelpers.hpp"
 
 //------------------------------------------------------------------------------
 Communication<zmq::socket_t>::Communication( zmq::context_t &c,
