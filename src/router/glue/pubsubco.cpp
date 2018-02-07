@@ -111,7 +111,7 @@ void PubSubCo::pubsub_message( const std::string &pub ) {
 
     if( m.is_enc() )
         enclave_matching( m );
-    else { printf("*** Should not happen in MR\n");
+    else { //printf("*** Should not happen in MR\n");
         open_matching( m );
     }
 }

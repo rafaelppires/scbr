@@ -77,7 +77,7 @@ int main( int argc, char **argv ) {
 
     if( args.key.empty() ) {
         std::cout << "Missing RSA private key (-? or --help for info)\n";
-        exit(1);
+        exit(-1);
     }
 #endif
 
@@ -85,14 +85,14 @@ int main( int argc, char **argv ) {
 
     if( args.input.empty() ) {
         std::cout << "Missing input <Publications file> (-? or --help for info)\n";
-        exit(0);
+        exit(-2);
     }
 
     std::ifstream pubsfile( args.input.c_str() );
     if( !pubsfile.good() ) {
         std::cerr << "Unable to succesfully open input file \""
                   << args.input << "\"\n";
-        exit(2);
+        exit(-3);
     }
 
     struct sigaction sigIntHandler;

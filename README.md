@@ -26,8 +26,24 @@ The solution for such issue is under development.
 
 **Source code:**
 ```
-git clone git@gitlab.securecloud.works:rafael.pires/scbr.git
+$ git clone git@gitlab.securecloud.works:rafael.pires/sgx_common.git
+$ git clone git@gitlab.securecloud.works:rafael.pires/scbr.git
+
+Or, alternatively:
+$ git clone https://gitlab.securecloud.works/rafael.pires/sgx_common.git
+$ git clone https://gitlab.securecloud.works/rafael.pires/scbr.git
 ```
+
+**To compile:**
+```
+$ cd scbr && make
+```
+
+**To test:**
+```
+$ make test
+```
+
 ##### Message interface
 Publication and subscription headers are in ASCII format, as follows:
 

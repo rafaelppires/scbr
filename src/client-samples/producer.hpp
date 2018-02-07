@@ -42,10 +42,10 @@ void Source::init() {
 //template <typename T>
 extern unsigned pubcount;
 void Source::publish( const std::string &h ) {
-#ifndef PLAINTEXT_MATCHING
-    Message m(true, encrypt(h), h);
-#else
+#ifdef PLAINTEXT_MATCHING
     Message m(true, h, h);
+#else
+    Message m(true, encrypt(h), h);
 #endif
     m.setpub(); // for statitical reasons - not intended for release
     stringstream ss; ss << m;

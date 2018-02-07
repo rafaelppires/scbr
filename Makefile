@@ -1,4 +1,5 @@
 CXX=g++-5
+CXXCFlags=-std=c++17 -g
 
 SGX_SDK := /opt/intel/sgxsdk
 
@@ -23,7 +24,7 @@ scbr: $(USERLIB) $(BINDIR)/scbr
 $(BINDIR)/scbr: | $(BINDIR)
 	@$(MAKE) -C $(FORWDIR) all && mv $(FORWDIR)/scbr $@ && mv $(FORWDIR)/*.signed.so $(BINDIR) && rm $(FORWDIR)/*.so
 
-tests: producer consumer scbr
+tests: minimalist producer consumer scbr
 
 ############################## PRODUCER
 producer: $(BINDIR)/producer
@@ -43,32 +44,42 @@ $(BINDIR)/consumer: $(addprefix $(OBJDIR)/, $(CONSUMEROBJS)) $(USERLIB) | $(BIND
 	@echo "LINK $@ <= $^"
 	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
 
+############################## MINIMALIST
+minimalist: $(BINDIR)/minimalist
+
+MINIMALISTOBJS := minimalist.o
+$(BINDIR)/minimalist: $(addprefix $(OBJDIR)/, $(MINIMALISTOBJS)) $(USERLIB) | $(BINDIR)
+	@echo "LINK $@ <= $^"
+	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
+
 ############################## USER LIBRARY
-USERLIBOBJS := $(addprefix $(OBJDIR)/, message.o communication_zmq.o sgx_cryptoall.o utils.o)
+ULOBJS := message communication_zmq sgx_cryptoall utils scbr_api
+USERLIBOBJS := $(addprefix $(OBJDIR)/, $(addsuffix .o, $(ULOBJS)))
 $(USERLIB): $(USERLIBOBJS) | $(LIBDIR)
 	@ar r $@ $^
 	@ranlib $@
 
 test: tests
+	@$(BINDIR)/minimalist
 
 INCLUDEDIRS := $(CLIENTSDIR) $(USERLIBDIR)/include $(addprefix src/router/, glue matching) ../sgx_common
-CLIENTOBJS := producer.o consumer.o
+CLIENTOBJS := producer.o consumer.o minimalist.o
 $(addprefix $(OBJDIR)/,$(CLIENTOBJS)) : $(OBJDIR)/%.o : $(CLIENTSDIR)/%.cpp | $(OBJDIR)
 	@echo "CXX $@ <= $^"
-	@$(CXX) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
+	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
 
 $(OBJDIR)/%.o : $(USERLIBDIR)/src/%.cpp | $(OBJDIR) 
 	@echo "CXX $@ <= $^"
-	@$(CXX) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
+	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
 
 $(OBJDIR)/%.o: $(SGXCOMMDIR)/%.cpp
 	@echo "CXX $@ <= $^"
-	@$(CXX) -std=c++11 -c $^ -o $@ $(addprefix -I, $(dir $<))
+	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(dir $<))
 
 $(OUTDIRS):
 	@mkdir $@
 
-.PHONY: producer consumer router tests test all clean
+.PHONY: producer consumer minimalist router tests test all clean
 
 clean:
 	$(MAKE) -C $(FORWDIR) clean
