@@ -53,7 +53,7 @@ endif
 
 # App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
 App_Cpp_Files := $(UNTRUSTED_DIR)/$(TARGET).cpp \
-                 $(addprefix $(SGXCOMM_DIR)/, sgx_initenclave.cpp sgx_errlist.cpp sgx_cryptoall.cpp utils.cpp) \
+                 $(addprefix $(SGXCOMM_DIR)/, sgx_initenclave.cpp sgx_errlist.cpp sgx_cryptoall.cpp sgx_utils_rp.cpp) \
                  $(addprefix $(SCBR_SRCS)/, pubsubco.cpp) \
                  $(addprefix $(CBRPREFILTER_DIR)/, cbr.cpp prefilter.cpp \
                              graph.cpp util.cpp event.cpp subscription.cpp) \
@@ -157,7 +157,7 @@ $(CBRPREFILTER_DIR)/%.o : $(CBRPREFILTER_DIR)/%.cc
 USERLIB := ../../../lib/libscbr.a
 $(TARGET) : $(SamplePreReq) $(USERLIB)
 	@echo "LINK =>  $@"
-	$(CXX) $^ -o $@ $(App_Link_Flags)
+	@$(CXX) $^ -o $@ $(App_Link_Flags)
 
 $(USERLIB):
 	@make -C ../../.. lib/$(basename $@)
