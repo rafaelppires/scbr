@@ -59,7 +59,7 @@ void Source::publish( const std::string &h ) {
 //------------------------------------------------------------------------------
 //template<typename T>
 std::string Source::encrypt( const std::string &plain ) {
-    return Crypto::encrypt_aes( plain );
+    return Crypto::encrypt_aes( "_header_key_", plain );
 }
 
 //------------------------------------------------------------------------------

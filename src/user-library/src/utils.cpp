@@ -48,6 +48,7 @@ static long perf_event_open( struct perf_event_attr *hw_event, pid_t pid,
 }
 
 void Logger::init( std::string outfname ) {
+    return;
     if( log_.is_open() ) log_.close();
     log_.open( outfname.c_str() );
     if( !log_.good() ) {
@@ -87,6 +88,7 @@ void Logger::init( std::string outfname ) {
 
 //------------------------------------------------------------------------------
 void Logger::close() {
+    return;
     ::close(cachemiss_fd);
     ::close(cacheref_fd);
     log_.close();
@@ -94,6 +96,7 @@ void Logger::close() {
 
 //------------------------------------------------------------------------------
 void Logger::start() {
+    return;
     if( cachemiss_fd != -1 ) {
         ioctl(cachemiss_fd, PERF_EVENT_IOC_RESET, 0);
         ioctl(cachemiss_fd, PERF_EVENT_IOC_ENABLE, 0);
@@ -107,6 +110,7 @@ void Logger::start() {
 //------------------------------------------------------------------------------
 #include <sys/resource.h>
 void Logger::finish() {
+    return;
     long long misscount, refcount;
     double time = timing_.end();
     ioctl(cacheref_fd, PERF_EVENT_IOC_DISABLE, 0);

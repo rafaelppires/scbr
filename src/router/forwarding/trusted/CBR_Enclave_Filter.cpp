@@ -89,17 +89,24 @@ void ecall_init( int verb ) {
 //------------------------------------------------------------------------------
 typedef vector<const viper::Subscription*> MatchList;
 void ecall_add_evt( const char * buff, size_t len ) {
-    if( len == 0 ) return;
+    if( len == 0 ) { printf("empty!\n"); return; }
     std::string rawhdr(buff,len); 
 #ifndef PLAINTEXT_MATCHING
+    const char *k = "_header_key_";
     uint8_t key[16], iv[16];
-    memset(key,0,16); memset(iv,0,16);
-    key[0] = 'a'; key[15] = '5';
-    iv[0] = 'x'; iv[15]= '?';
+    memset(key,0,16);
+    memcpy(key, k, strlen(k) );
+    memcpy(iv, buff, 16);
 
     char recovered[512];
     size_t sz = std::min(len,sizeof(recovered));
-    decrypt_aes( AES128, (const uint8_t*)buff, (uint8_t*)recovered, sz, key, iv );
+    if( sz < 16 ) {
+        printf("\033[91mSCBR Error: invalid cipher len(%lu)\033[0m\n", sz );
+        return;
+    }
+    sz -= 16;
+
+    decrypt_aes( AES128, (const uint8_t*)buff+16, (uint8_t*)recovered, sz, key, iv );
     if( is_cipher((const uint8_t*)recovered, sz) ) {
         recovered[ std::min(sz,sizeof(recovered)-1) ] = 0;
         printf("\033[91mSCBR Error: decryption did not give plaintext sz(%d) len(%d) '%s' -> '%s'\033[0m\n", sz, len,rawhdr.c_str(),recovered);

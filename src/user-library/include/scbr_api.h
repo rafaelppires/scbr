@@ -5,6 +5,7 @@
 #include <communication_zmq.h>
 #include <string>
 #include <map>
+#include <mutex>
 
 enum Action {
     SCBR_REGISTER,
@@ -19,6 +20,7 @@ enum ComparisonOperator {
     SCBR_GE
 };
 
+typedef std::function<void(std::string)> PubCallback;
 typedef std::map< std::string, std::string > PubMap;
 typedef std::map< std::string, std::pair< ComparisonOperator, std::string > >
                                              SubMap;
@@ -44,24 +46,33 @@ public:
                     double );
     void predicate( const std::string &key, ComparisonOperator c,
                     const std::string &value );
-    void callback(void (&)());
+    void set_callback( PubCallback );
+    PubCallback callback() const;
     std::string serialize() const;
 private:
     SubMap data_;
+    PubCallback callback_;
 };
 
 //------------------------------------------------------------------------------
 class Matcher {
 public:
     Matcher();
+    void terminate();
 
     void send( const Subscription &sub );
     void send( const Publication &pub );
 
 private:
+    void receive_polling();
+
     zmq::context_t context_;
     Communication<zmq::socket_t> comm_;
     size_t ssubcount_, spubcount_, rpubcount_;
+    std::map< std::string, PubCallback > callbacks_;
+
+    std::mutex term_mtx_;
+    bool terminated_;
 };
 
 #endif

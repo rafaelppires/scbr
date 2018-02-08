@@ -31,7 +31,7 @@ producer: $(BINDIR)/producer
 
 SAMPLESDIR      := src/client-samples
 PRODUCEROBJS    := producer.o
-LIBS            := zmq cryptopp m boost_system boost_chrono
+LIBS            := zmq cryptopp m boost_system boost_chrono pthread
 $(BINDIR)/producer: $(addprefix $(OBJDIR)/, $(PRODUCEROBJS)) $(USERLIB) | $(BINDIR)
 	@echo "LINK $@ <= $^"
 	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
@@ -53,7 +53,7 @@ $(BINDIR)/minimalist: $(addprefix $(OBJDIR)/, $(MINIMALISTOBJS)) $(USERLIB) | $(
 	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
 
 ############################## USER LIBRARY
-ULOBJS := message communication_zmq sgx_cryptoall utils scbr_api
+ULOBJS := message communication_zmq sgx_cryptoall sgx_utils_rp utils scbr_api
 USERLIBOBJS := $(addprefix $(OBJDIR)/, $(addsuffix .o, $(ULOBJS)))
 $(USERLIB): $(USERLIBOBJS) | $(LIBDIR)
 	@ar r $@ $^

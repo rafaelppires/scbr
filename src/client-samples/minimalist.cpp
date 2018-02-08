@@ -12,7 +12,8 @@ std::atomic<int> done{0};
 #include <scbr_api.h>
 
 const std::string key = "very secret key";
-void callback_function() {
+void callback_function( std::string data ) {
+    std::cout << "Publication content: " << data << std::endl;
     done = 1;
     cv.notify_all();
 }
@@ -21,13 +22,13 @@ int main() {
     Matcher scbr;
 
     Subscription sub( SCBR_REGISTER );
-    sub.predicate("name", SCBR_EQ, "SecureCloud Inc.");
+    sub.predicate("id", SCBR_EQ, 1 );
     sub.predicate("stock_price", SCBR_LT, 100.00 );
-    sub.callback( callback_function );
+    sub.set_callback( callback_function );
     scbr.send( sub );
 
     Publication pub;
-    pub.attribute( "name", "SecureCloud Inc." );
+    pub.attribute( "id", 1 );
     pub.attribute( "stock_price", 180.00 );
     pub.attribute( "date", "31.01.2018" );
     pub.payload( "Report about the stock" );
@@ -40,16 +41,20 @@ int main() {
     pub.encrypt_payload( key );
     scbr.send( pub );
 
+    int ret;
     {
         std::unique_lock<std::mutex> lk(cv_m);
         auto now = std::chrono::system_clock::now();
-        if( cv.wait_until(lk, now + 500ms, [](){return done == 1;}) ) {
+        if( cv.wait_until(lk, now + 5000ms, [](){return done == 1;}) ) {
             std::cerr << "All good.\n";
-            return 0;
+            ret = 0;
         } else {
             std::cerr << "Timed out. No publication received\n";
-            return -1;
+            ret = -1;
         }
     }
+
+    scbr.terminate();
+    return ret;
 }
 
