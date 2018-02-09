@@ -8,7 +8,7 @@ enclave {
      */
     untrusted {
         void ocall_print([in, string] const char *str);
-        void ocall_added_notify( [in, string] const char *b, [in,size=len] const char *hdr, size_t len );
+        void ocall_added_notify( [in, string] const char *b, [in,size=len] const char *hdr, size_t len, [in,size=hllen] const char *hl, size_t hllen );
     };
 
 

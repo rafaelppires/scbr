@@ -41,9 +41,12 @@ void ocall_print(const char *str) {
 #include <sgx_cryptoall.h>
 #include <pubsubco.h>
 PubSubCo *pubsub = 0;
-void ocall_added_notify( const char *b, const char *hdr, size_t len ) {
-    //std::cout << "OCALL: [" << hdr << "] " << Crypto::printable(b) << std::endl;
-    if( pubsub ) pubsub->forward( b, std::string(hdr,len) );
+void ocall_added_notify( const char *b, 
+                         const char *hdr, size_t len, 
+                         const char *hlist, size_t hllen ) {
+    if( pubsub ) pubsub->forward( b, 
+                                  std::string(hdr,len),
+                                  std::string(hlist,hllen) );
 }
 
 //------------------------------------------------------------------------------

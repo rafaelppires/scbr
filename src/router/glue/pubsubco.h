@@ -19,7 +19,8 @@ public:
     }
 
     void pubsub_message( const std::string &pub );
-	void forward( const std::string &to, const std::string &header );
+	void forward( const std::string &to, const std::string &header,
+                                         const std::string &hash );
     void print_stats();
 
 private:

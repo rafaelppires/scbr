@@ -48,7 +48,7 @@ public:
                     const std::string &value );
     void set_callback( PubCallback );
     PubCallback callback() const;
-    std::string serialize() const;
+    std::string serialize( std::string &hash ) const;
 private:
     SubMap data_;
     PubCallback callback_;

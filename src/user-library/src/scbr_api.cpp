@@ -25,7 +25,7 @@ void Publication::payload( const std::string &payload ) {
 
 //------------------------------------------------------------------------------
 void Publication::encrypt_payload( const std::string &key ) {
-
+    Crypto::encrypt_aes_inline( key, payload_ );
 }
 
 //------------------------------------------------------------------------------
@@ -76,7 +76,7 @@ PubCallback Subscription::callback() const {
 }
 
 //------------------------------------------------------------------------------
-std::string Subscription::serialize() const {
+std::string Subscription::serialize( std::string &headerhash ) const {
     std::string header = "0 54321 S";
     for( auto const &kv : data_ ) {
         header += " i " + kv.first + " ";     // key
@@ -96,8 +96,9 @@ std::string Subscription::serialize() const {
 #endif
     Message m(true, header, "");
     m.setsub();
-    std::stringstream ss; ss << m;
+    headerhash = Crypto::sha256(header);
 
+    std::stringstream ss; ss << m;
     return ss.str();
 }
 
@@ -140,9 +141,16 @@ void Matcher::receive_polling() {
             if( items[0].revents & ZMQ_POLLIN ) {
                 outside.recv( &zmsg );
                 if( zmsg.size() == 0 ) continue;
-                if( callbacks_.size() ) 
-                    callbacks_.begin()->second
-                        ( std::string((const char*)zmsg.data(),zmsg.size()) );
+                ++rpubcount_;
+                std::string content(zmsg.data<char>(),zmsg.size());
+                std::string hash( content.substr(0,32) );
+                content = content.substr(32);
+
+                // Call the right callback based on SUB hash
+                auto it = callbacks_.find( hash );
+                if( it != callbacks_.end() ) 
+                    it->second( content );
+
             } else if( items[1].revents & ZMQ_POLLIN ) {
                 inside.recv( &zmsg );
                 std::string content( zmsg.data<char>(), zmsg.size() );
@@ -160,8 +168,7 @@ void Matcher::receive_polling() {
 
 //------------------------------------------------------------------------------
 void Matcher::send( const Subscription &sub ) {
-    std::string subscription = sub.serialize(),
-                sha = Crypto::sha256( subscription );
+    std::string sha, subscription = sub.serialize( sha );
     send( subscription );
     callbacks_[sha] = sub.callback();
     ++ssubcount_;

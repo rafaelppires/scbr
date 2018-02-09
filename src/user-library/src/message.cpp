@@ -88,18 +88,10 @@ int Message::parse( const std::string &s ) {
 
 //------------------------------------------------------------------------------
 std::string Message::to_string() const {
-    std::stringstream ret, s_in, s_out;
-    std::string header, payload;
-
-    CryptoPP::StringSource s1( header_, true, new CryptoPP::Base64Decoder(
-                                        new CryptoPP::StringSink( header ) ));
-
-    CryptoPP::StringSource s2( payload_, true, new CryptoPP::Base64Decoder(
-                                        new CryptoPP::StringSink( payload ) ));
-
+    std::stringstream ret;
     ret << "Enc: " << henc_ << "\n"
-        << "Header: '" << Crypto::printable(header) << "'\n"
-        << "Payload: '" << Crypto::printable(payload) << "'\n";
+        << "Header: '" << Crypto::printable(header()) << "'\n"
+        << "Payload: '" << Crypto::printable(payload()) << "'\n";
     return ret.str();
 }
 

@@ -55,10 +55,13 @@ public:
 		return attributes_[type];
 	}
 
+    void hash( const std::string &h ) { hash_ = h; }
+    std::string hash() const { return hash_; }
+
 	friend ostream& operator<<(ostream& stream, const Subscription& s);
 
 private:
-	string name_;
+	string name_, hash_;
 	subscription sub_;
 	void *attributes_[2];
 };

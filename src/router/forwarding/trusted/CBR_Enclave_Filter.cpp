@@ -91,6 +91,7 @@ typedef vector<const viper::Subscription*> MatchList;
 void ecall_add_evt( const char * buff, size_t len ) {
     if( len == 0 ) { printf("empty!\n"); return; }
     std::string rawhdr(buff,len); 
+    std::string hash( Crypto::sha256( std::string(buff,len) ) );
 #ifndef PLAINTEXT_MATCHING
     const char *k = "_header_key_";
     uint8_t key[16], iv[16];
@@ -127,6 +128,7 @@ void ecall_add_evt( const char * buff, size_t len ) {
     if( sub ) {
 //afterstats.begin();
         if(verbosity > 1) printf("[SUB] %s\n", s.c_str());
+        sub->hash( hash );
         g->add( *sub );
 //afterstats.end();
     } else if( pub ) {
@@ -135,11 +137,15 @@ void ecall_add_evt( const char * buff, size_t len ) {
         g->match( *pub, matches );
         if( matches->size() ) ++match_count;
         if( matches->size() ) {
-            std::string matchlist;
+            std::string matchlist, hashlist;
             MatchList::iterator it = matches->begin(), end = matches->end();
-            for(; it!=end; ++it)
+            for(; it!=end; ++it) {
                 matchlist += (*it)->name() + " ";
-            ocall_added_notify( matchlist.c_str(), rawhdr.c_str(), rawhdr.size() );
+                hashlist  += (*it)->hash();
+            }
+            ocall_added_notify( matchlist.c_str(), 
+                                rawhdr.c_str(), rawhdr.size(), 
+                                hashlist.c_str(), hashlist.size() );
             if(verbosity > 0) printf("Matched %lu: %s\n", matches->size(), matchlist.c_str());
         }
         delete matches;

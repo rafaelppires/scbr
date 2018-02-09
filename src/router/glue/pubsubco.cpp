@@ -57,6 +57,7 @@ void ecall_add_evt( const char * buff, size_t len );
 #endif
 //------------------------------------------------------------------------------
 void PubSubCo::enclave_matching( const Message &m ) {
+    printf( ">>> %s header>>> %s\n", m.to_string().c_str(), Crypto::printable(m.header()).c_str() );
     data_table_[ m.header() ] = m.payload();
     
     if( m.is_pub() ) {
@@ -85,16 +86,18 @@ void PubSubCo::enclave_matching( const Message &m ) {
 }
 
 //------------------------------------------------------------------------------
-void PubSubCo::forward( const std::string &t, const std::string &header ) {
-    if( verbosity_ > 1 ) std::cout << "Fwd msg to: '" << t << "' pload: '" << Crypto::printable(data_table_[header]) << "' which matches '" << Crypto::printable(header) << "'\n";
+void PubSubCo::forward( const std::string &t, const std::string &header,
+                                              const std::string &hash ) {
+    if( verbosity_ > 1 ) std::cout << "Fwd msg to: '" << t << "' pload: '" << Crypto::printable(data_table_[header]) << "' which matches '" << Crypto::printable(hash) << "'\n";
     char *buf = strdup( t.c_str() );
     char *p = strtok(buf, " ");
+    size_t i = 0;
     while (p) {
         //if( verbosity_ > 0 ) printf ("Sending to: '%s'\n", p);
 
         s_sendmore( comm_, p );
         s_sendmore( comm_, "" );
-        s_send( comm_, data_table_[header] );
+        s_send( comm_, hash.substr(i++*32,32)+data_table_[header] );
 
         p = strtok(NULL, " ");
     }

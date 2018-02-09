@@ -24,7 +24,7 @@ scbr: $(USERLIB) $(BINDIR)/scbr
 $(BINDIR)/scbr: | $(BINDIR)
 	@$(MAKE) -C $(FORWDIR) all && mv $(FORWDIR)/scbr $@ && mv $(FORWDIR)/*.signed.so $(BINDIR) && rm $(FORWDIR)/*.so
 
-TESTEXECS := minimalist user_friendly_simple producer consumer
+TESTEXECS := minimalist user_friendly producer consumer
 tests: scbr $(TESTEXECS)
 
 ############################## TESTS
