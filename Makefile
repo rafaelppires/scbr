@@ -44,7 +44,11 @@ $(USERLIB): $(USERLIBOBJS) | $(LIBDIR)
 	@ranlib $@
 
 test: tests
-	@$(BINDIR)/minimalist
+	@./bin/scbr -c localhost:6666 -c localhost:6667 > /dev/null &
+	@sleep 3
+	@timeout 1s $(BINDIR)/minimalist > /dev/null && echo "PASSED" || echo "FAILED"
+	@timeout 1s $(BINDIR)/user_friendly > /dev/null && echo "PASSED" || echo "FAILED"
+	@killall -9 scbr
 
 INCLUDEDIRS := $(CLIENTSDIR) $(USERLIBDIR)/include $(addprefix src/router/, glue matching) ../sgx_common
 CLIENTOBJS := $(addsuffix .o, $(TESTEXECS))

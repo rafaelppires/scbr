@@ -7,7 +7,7 @@ zmq::context_t c;
 int main() {
     zmq::socket_t socket( c, ZMQ_DEALER );
     socket.setsockopt( ZMQ_IDENTITY, "54321", 5 );
-    socket.bind( "tcp://*:6666" );
+    socket.bind( "tcp://*:6667" );
 
     s_sendmore( socket, "" );
     s_send( socket, "5 ADq/Q7Baw0ul4D0XLcKTGk4RkbCGPM+FgpuSg/bMDj7tza9mZfsTmIDpm3x1+/Y1P8GBDVc+|Mi9G/A3wz7IN43//5lQ= " );
@@ -20,8 +20,9 @@ int main() {
         zmq::message_t zmsg;
         socket.recv( &zmsg );
         if( zmsg.size() == 0 ) continue;
-        std::cout << std::string(zmsg.data<char>(),zmsg.size()) << "\n";
+        std::cout << std::string(zmsg.data<char>(),zmsg.size()).substr(32) << "\n";
         break;
     }
+    return 0;
 }
 

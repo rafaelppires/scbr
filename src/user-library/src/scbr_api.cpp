@@ -6,10 +6,18 @@
 #include <thread>
 #include <zhelpers.h>
 
+#define MAX_HEADER_SIZE 512
+const char *headerkey = "_header_key_";
+
 //--------------------- PUBLICATION --------------------------------------------
+Publication::Publication( bool header_in_payload ) : 
+                                                  hpayload_(header_in_payload) {
+}
+
+//------------------------------------------------------------------------------
 void Publication::attribute( const std::string &key, 
                              const std::string &value ) {
-    data_[key] = Crypto::base64( value );
+    data_[key] = Crypto::b64_encode( value );
     std::replace( data_[key].begin(), data_[key].end(), '\n', '|');
 }
 
@@ -24,12 +32,66 @@ void Publication::payload( const std::string &payload ) {
 }
 
 //------------------------------------------------------------------------------
+std::string Publication::payload() const {
+    return payload_;
+}
+
+//------------------------------------------------------------------------------
+PubMap Publication::attributes() const {
+    return data_;
+}
+
+//------------------------------------------------------------------------------
 void Publication::encrypt_payload( const std::string &key ) {
     Crypto::encrypt_aes_inline( key, payload_ );
 }
 
 //------------------------------------------------------------------------------
-std::string Publication::serialize() const {
+void Publication::fillattributes( const std::string &header ) {
+    size_t idx = 0, idx2;
+    do {
+        idx = header.find( "i", idx );
+        idx = header.find_first_not_of( " ", idx + 1 );
+        idx2 = header.find(" ",idx);
+        std::string key =  header.substr( idx, idx2-idx );
+        idx = header.find_first_not_of( " ", idx2 + 1 );
+        idx2 = header.find(" ",idx);
+        std::string value = header.substr( idx, idx2-idx );
+        idx = idx2+1;
+
+        if( isdigit(value[0]) )
+            data_[key] = value;
+        else
+            data_[key] = Crypto::b64_decode(value);
+    } while(idx);
+}
+
+//------------------------------------------------------------------------------
+void Publication::deserialize(const std::string &key, const std::string &data) {
+    if( hpayload_ ) {
+        if( data.size() < sizeof(size_t) ) {
+            printinfo( LLWARN, "Format error. Message too small." );
+            return;
+        }
+
+        size_t size;
+        memcpy( &size, data.c_str(), sizeof(size_t) );
+        if( size > MAX_HEADER_SIZE ) { 
+            printinfo( LLWARN, "Format error. Header larger than allowed." );
+            return;
+        }
+
+        std::string header( data.substr(sizeof(size_t),size) );
+        Crypto::decrypt_aes_inline( headerkey, header );
+        fillattributes( header );
+        payload_ = data.substr( sizeof(size_t)+size );
+    } else
+        payload_ = data;
+    Crypto::decrypt_aes_inline( key, payload_ );
+}
+
+//------------------------------------------------------------------------------
+std::string Publication::serialize() {
     std::string header = "0 0 P";
     for( auto const &kv : data_ ) {
         header += " i " + kv.first + " " + kv.second;
@@ -37,8 +99,14 @@ std::string Publication::serialize() const {
 
     printinfo( LLLOG, "-> %s\n", header.c_str() );
 #ifndef PLAINTEXT_MATCHING
-    Crypto::encrypt_aes_inline( "_header_key_", header );
+    Crypto::encrypt_aes_inline( headerkey, header );
 #endif
+    if( hpayload_ ) {
+        size_t size = header.size();
+        payload_.insert( 0, header );
+        payload_.insert( 0, std::string((char*)&size,sizeof(size_t)) );
+    }
+
     Message m(true, header, payload_);
     m.setpub(); // statistics only, not for release
     std::stringstream ss; ss << m;
@@ -60,7 +128,7 @@ void Subscription::predicate( const std::string &key, ComparisonOperator c,
 //------------------------------------------------------------------------------
 void Subscription::predicate( const std::string &key, ComparisonOperator c,
                               const std::string &value ) {
-    data_[key] = std::make_pair( c, Crypto::base64(value) );
+    data_[key] = std::make_pair( c, Crypto::b64_encode(value) );
     std::replace( data_[key].second.begin(),
                   data_[key].second.end(), '\n', '|');
 }
@@ -76,8 +144,9 @@ PubCallback Subscription::callback() const {
 }
 
 //------------------------------------------------------------------------------
-std::string Subscription::serialize( std::string &headerhash ) const {
-    std::string header = "0 54321 S";
+std::string Subscription::serialize( const std::string &id,
+                                     std::string &headerhash ) const {
+    std::string header = "0 " + id + " S";
     for( auto const &kv : data_ ) {
         header += " i " + kv.first + " ";     // key
         switch( kv.second.first ) {           // comparison operator
@@ -92,7 +161,7 @@ std::string Subscription::serialize( std::string &headerhash ) const {
 
     printinfo( LLLOG, "-> %s\n", header.c_str() );
 #ifndef PLAINTEXT_MATCHING
-    Crypto::encrypt_aes_inline( "_header_key_", header );
+    Crypto::encrypt_aes_inline( headerkey, header );
 #endif
     Message m(true, header, "");
     m.setsub();
@@ -108,7 +177,7 @@ Matcher::Matcher( std::string addr, std::string id ) : id_(id),
                             ssubcount_(0), spubcount_(0), rpubcount_(0), 
                             context_(1), outsock_(context_,ZMQ_PUSH),
                             recv_polling_(&Matcher::receive_polling, this) {
-    set_logmask( ~0 );
+    //set_logmask( ~0 ); // Uncomment if you wanna see debug messages
     set_rand_seed();   
     outsock_.bind( "inproc://remote" );
 }
@@ -168,14 +237,14 @@ void Matcher::receive_polling() {
 
 //------------------------------------------------------------------------------
 void Matcher::send( const Subscription &sub ) {
-    std::string sha, subscription = sub.serialize( sha );
+    std::string sha, subscription = sub.serialize( id_, sha );
     send( subscription );
     callbacks_[sha] = sub.callback();
     ++ssubcount_;
 }
 
 //------------------------------------------------------------------------------
-void Matcher::send( const Publication &pub ) {
+void Matcher::send( Publication &pub ) {
     send( pub.serialize() );
     ++spubcount_;
 }

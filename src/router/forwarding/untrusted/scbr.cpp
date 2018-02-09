@@ -87,11 +87,8 @@ void legacymain( const Arguments &args ) {
 
     while (1) {
         std::string s1 = s_recv( broker );
-std::cout << "\"" << s1 << "\"\n";
         std::string s2 = s_recv( broker );
-std::cout << "\"" << s2 << "\"\n";
         std::string s3 = s_recv( broker );
-std::cout << "\"" << s3 << "\"\n";
 
         pubsub->pubsub_message( s3 );
     }

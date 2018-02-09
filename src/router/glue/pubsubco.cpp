@@ -57,7 +57,6 @@ void ecall_add_evt( const char * buff, size_t len );
 #endif
 //------------------------------------------------------------------------------
 void PubSubCo::enclave_matching( const Message &m ) {
-    printf( ">>> %s header>>> %s\n", m.to_string().c_str(), Crypto::printable(m.header()).c_str() );
     data_table_[ m.header() ] = m.payload();
     
     if( m.is_pub() ) {

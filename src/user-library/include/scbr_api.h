@@ -28,12 +28,19 @@ typedef std::map< std::string, std::pair< ComparisonOperator, std::string > >
 //------------------------------------------------------------------------------
 class Publication {
 public:
+    Publication( bool header_in_payload = true );
     void attribute( const std::string &key, const std::string &value );
     void attribute( const std::string &key, double value );
     void payload( const std::string &payload );
+    std::string payload() const;
+    PubMap attributes() const;
     void encrypt_payload( const std::string &key );
-    std::string serialize() const;
+    std::string serialize();
+    void deserialize( const std::string &key, const std::string &data );
 private:
+    void fillattributes( const std::string &header );
+
+    bool hpayload_;
     PubMap data_;
     std::string payload_;
 };
@@ -48,7 +55,7 @@ public:
                     const std::string &value );
     void set_callback( PubCallback );
     PubCallback callback() const;
-    std::string serialize( std::string &hash ) const;
+    std::string serialize( const std::string &id, std::string &hash ) const;
 private:
     SubMap data_;
     PubCallback callback_;
@@ -61,7 +68,7 @@ public:
     void terminate();
 
     void send( const Subscription &sub );
-    void send( const Publication &pub );
+    void send( Publication &pub );
     void send( const std::string &str );
 
 private:
