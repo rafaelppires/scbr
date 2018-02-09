@@ -30,7 +30,6 @@ void Publication::encrypt_payload( const std::string &key ) {
 
 //------------------------------------------------------------------------------
 std::string Publication::serialize() const {
-//return "cachaça";
     std::string header = "0 0 P";
     for( auto const &kv : data_ ) {
         header += " i " + kv.first + " " + kv.second;
@@ -103,35 +102,59 @@ std::string Subscription::serialize() const {
 }
 
 //--------------------- ROUTER INTERFACE ---------------------------------------
-Matcher::Matcher() : ssubcount_(0), spubcount_(0), rpubcount_(0), 
-                     terminated_(false), context_(1), 
-                     comm_(context_, "tcp://*:6666", "54321") {
+Matcher::Matcher( std::string addr, std::string id ) : id_(id),
+                            addr_( "tcp://" + addr ),
+                            ssubcount_(0), spubcount_(0), rpubcount_(0), 
+                            context_(1), outsock_(context_,ZMQ_PUSH),
+                            recv_polling_(&Matcher::receive_polling, this) {
     set_logmask( ~0 );
-    set_rand_seed();    
-    std::thread t( &Matcher::receive_polling, this );
-    t.detach();
+    set_rand_seed();   
+    outsock_.bind( "inproc://remote" );
 }
 
 //------------------------------------------------------------------------------
-#include <unistd.h>
+// Receives publications that matched previous subscriptions
+//------------------------------------------------------------------------------
 void Matcher::receive_polling() {
-    bool finished;
-    struct zmq_pollitem_t pi[] = { {(void*)comm_.socket(), 0, ZMQ_POLLIN, 0} };
-    while( true ) {
-        {
-            std::unique_lock<std::mutex> lock(term_mtx_);
-            finished = terminated_;
-        }
-        if( finished ) break;
-        int rc = zmq_poll( pi, 1, 1000 ); // each 1ms
-        if( rc == 0 ) continue;
+    zmq::socket_t outside( context_, ZMQ_DEALER ), 
+                  inside( context_, ZMQ_PULL );
 
-        zmq::message_t zmsg;
-        comm_.socket().recv( &zmsg );
-        if( zmsg.size() == 0 ) continue;
-        if( callbacks_.size() ) 
-            callbacks_.begin()->second
-                          ( std::string((const char*)zmsg.data(),zmsg.size()) );
+    // set socket options
+    int linger = 1;
+    outside.setsockopt( ZMQ_LINGER, &linger, sizeof(linger) );
+    outside.setsockopt( ZMQ_IDENTITY, id_.c_str(), id_.size() );
+    inside.setsockopt( ZMQ_LINGER, &linger, sizeof(linger) );
+
+    // bind or connect
+    outside.bind( addr_ );
+    inside.connect( "inproc://remote" );
+
+    // start polling
+    zmq_pollitem_t items[] = { { (void*)outside, 0, ZMQ_POLLIN, 0 },
+                               { (void*)inside,  0, ZMQ_POLLIN, 0 } };
+    try{
+        while (1) {
+            zmq::message_t zmsg;
+            zmq::poll( items, sizeof(items)/sizeof(zmq_pollitem_t), -1 );
+
+            if( items[0].revents & ZMQ_POLLIN ) {
+                outside.recv( &zmsg );
+                if( zmsg.size() == 0 ) continue;
+                if( callbacks_.size() ) 
+                    callbacks_.begin()->second
+                        ( std::string((const char*)zmsg.data(),zmsg.size()) );
+            } else if( items[1].revents & ZMQ_POLLIN ) {
+                inside.recv( &zmsg );
+                std::string content( zmsg.data<char>(), zmsg.size() );
+                if( content == "*die*" ) break;
+                if( zmsg.size() == 0 )
+                    s_sendmore( outside, content );
+                else
+                    s_send( outside, content );
+            }
+        }
+    } catch( zmq::error_t e ) {
+        printf("error_t\n");
     }
 }
 
@@ -139,25 +162,28 @@ void Matcher::receive_polling() {
 void Matcher::send( const Subscription &sub ) {
     std::string subscription = sub.serialize(),
                 sha = Crypto::sha256( subscription );
-    comm_.send( subscription );
+    send( subscription );
     callbacks_[sha] = sub.callback();
     ++ssubcount_;
 }
 
 //------------------------------------------------------------------------------
 void Matcher::send( const Publication &pub ) {
-    comm_.send( pub.serialize() );
+    send( pub.serialize() );
     ++spubcount_;
 }
 
 //------------------------------------------------------------------------------
+void Matcher::send( const std::string &str ) {
+    s_sendmore( outsock_, "" );
+    s_send( outsock_, str );
+}
+
+//------------------------------------------------------------------------------
 void Matcher::terminate() {
-    using namespace std::chrono_literals;
-    {
-        std::unique_lock<std::mutex> lock(term_mtx_);
-        terminated_ = true;
-    }
-    std::this_thread::sleep_for(2ms);
+    s_send( outsock_, "*die*" );
+    recv_polling_.join();
+    outsock_.close();
 }
 
 //------------------------------------------------------------------------------

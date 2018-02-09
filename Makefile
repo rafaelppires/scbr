@@ -24,31 +24,15 @@ scbr: $(USERLIB) $(BINDIR)/scbr
 $(BINDIR)/scbr: | $(BINDIR)
 	@$(MAKE) -C $(FORWDIR) all && mv $(FORWDIR)/scbr $@ && mv $(FORWDIR)/*.signed.so $(BINDIR) && rm $(FORWDIR)/*.so
 
-tests: minimalist producer consumer scbr
+TESTEXECS := minimalist user_friendly_simple producer consumer
+tests: scbr $(TESTEXECS)
 
-############################## PRODUCER
-producer: $(BINDIR)/producer
+############################## TESTS
+$(TESTEXECS) : % : $(BINDIR)/%
 
 SAMPLESDIR      := src/client-samples
-PRODUCEROBJS    := producer.o
 LIBS            := zmq cryptopp m boost_system boost_chrono pthread
-$(BINDIR)/producer: $(addprefix $(OBJDIR)/, $(PRODUCEROBJS)) $(USERLIB) | $(BINDIR)
-	@echo "LINK $@ <= $^"
-	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
-
-############################## CONSUMER
-consumer: $(BINDIR)/consumer
-
-CONSUMEROBJS    := consumer.o
-$(BINDIR)/consumer: $(addprefix $(OBJDIR)/, $(CONSUMEROBJS)) $(USERLIB) | $(BINDIR)
-	@echo "LINK $@ <= $^"
-	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
-
-############################## MINIMALIST
-minimalist: $(BINDIR)/minimalist
-
-MINIMALISTOBJS := minimalist.o
-$(BINDIR)/minimalist: $(addprefix $(OBJDIR)/, $(MINIMALISTOBJS)) $(USERLIB) | $(BINDIR)
+$(addprefix $(BINDIR)/, $(TESTEXECS)): $(BINDIR)/% : $(OBJDIR)/%.o $(USERLIB) | $(BINDIR)
 	@echo "LINK $@ <= $^"
 	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
 
@@ -63,7 +47,7 @@ test: tests
 	@$(BINDIR)/minimalist
 
 INCLUDEDIRS := $(CLIENTSDIR) $(USERLIBDIR)/include $(addprefix src/router/, glue matching) ../sgx_common
-CLIENTOBJS := producer.o consumer.o minimalist.o
+CLIENTOBJS := $(addsuffix .o, $(TESTEXECS))
 $(addprefix $(OBJDIR)/,$(CLIENTOBJS)) : $(OBJDIR)/%.o : $(CLIENTSDIR)/%.cpp | $(OBJDIR)
 	@echo "CXX $@ <= $^"
 	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
@@ -79,7 +63,7 @@ $(OBJDIR)/%.o: $(SGXCOMMDIR)/%.cpp
 $(OUTDIRS):
 	@mkdir $@
 
-.PHONY: producer consumer minimalist router tests test all clean
+.PHONY: $(TESTEXECS) router tests test all clean
 
 clean:
 	$(MAKE) -C $(FORWDIR) clean

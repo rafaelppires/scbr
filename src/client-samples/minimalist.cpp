@@ -1,60 +1,27 @@
 #include <iostream>
-#include <atomic>
-#include <condition_variable>
-#include <thread>
-#include <chrono>
-using namespace std::chrono_literals;
- 
-std::condition_variable cv;
-std::mutex cv_m;
-std::atomic<int> done{0};
+#include <zmq.hpp>
+#include <zhelpers.h>
 
-#include <scbr_api.h>
-
-const std::string key = "very secret key";
-void callback_function( std::string data ) {
-    std::cout << "Publication content: " << data << std::endl;
-    done = 1;
-    cv.notify_all();
-}
+zmq::context_t c;
 
 int main() {
-    Matcher scbr;
+    zmq::socket_t socket( c, ZMQ_DEALER );
+    socket.setsockopt( ZMQ_IDENTITY, "54321", 5 );
+    socket.bind( "tcp://*:6666" );
 
-    Subscription sub( SCBR_REGISTER );
-    sub.predicate("id", SCBR_EQ, 1 );
-    sub.predicate("stock_price", SCBR_LT, 100.00 );
-    sub.set_callback( callback_function );
-    scbr.send( sub );
+    s_sendmore( socket, "" );
+    s_send( socket, "5 ADq/Q7Baw0ul4D0XLcKTGk4RkbCGPM+FgpuSg/bMDj7tza9mZfsTmIDpm3x1+/Y1P8GBDVc+|Mi9G/A3wz7IN43//5lQ= " );
+    s_sendmore( socket, "" );
+    s_send( socket, "3 1gvSGAWUjTOECsRxgTsFUh6wdUWwFqdq4ZVNsWGVwmGwnbYR7Ms91XplC3YJ5ru4yOVfapXV|phqwv52fmSp9ySHoPAI4v8zcrtyDUf4DgaU+INVzfg== UmVwb3J0IGFib3V0IHRoZSBzdG9jaw==" );
+    s_sendmore( socket, "" );
+    s_send( socket, "3 IAs1W9YZjExaUIN2Aq5bSGuIcchdFJKPkwV6Xq9Drx0EvXtDdRoD4aB/GYh4Hvud0+aGXjuL|vRpmmEEj4PeFVa6hVcZenJ3RkEjv/VapmWoABhWC QW5vdGhlciByZXBvcnQgYWJvdXQgdGhlIHN0b2Nr" );
 
-    Publication pub;
-    pub.attribute( "id", 1 );
-    pub.attribute( "stock_price", 180.00 );
-    pub.attribute( "date", "31.01.2018" );
-    pub.payload( "Report about the stock" );
-    pub.encrypt_payload( key );
-    scbr.send( pub );
-
-    pub.attribute( "stock_price", 90.00 );
-    pub.attribute( "date", "01.02.2018" );
-    pub.payload( "Another report about the stock" );
-    pub.encrypt_payload( key );
-    scbr.send( pub );
-
-    int ret;
-    {
-        std::unique_lock<std::mutex> lk(cv_m);
-        auto now = std::chrono::system_clock::now();
-        if( cv.wait_until(lk, now + 5000ms, [](){return done == 1;}) ) {
-            std::cerr << "All good.\n";
-            ret = 0;
-        } else {
-            std::cerr << "Timed out. No publication received\n";
-            ret = -1;
-        }
+    while( true ) {
+        zmq::message_t zmsg;
+        socket.recv( &zmsg );
+        if( zmsg.size() == 0 ) continue;
+        std::cout << std::string(zmsg.data<char>(),zmsg.size()) << "\n";
+        break;
     }
-
-    scbr.terminate();
-    return ret;
 }
 

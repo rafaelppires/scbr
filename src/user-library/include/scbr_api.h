@@ -5,7 +5,7 @@
 #include <communication_zmq.h>
 #include <string>
 #include <map>
-#include <mutex>
+#include <thread>
 
 enum Action {
     SCBR_REGISTER,
@@ -57,22 +57,23 @@ private:
 //------------------------------------------------------------------------------
 class Matcher {
 public:
-    Matcher();
+    Matcher( std::string addr, std::string id );
     void terminate();
 
     void send( const Subscription &sub );
     void send( const Publication &pub );
+    void send( const std::string &str );
 
 private:
+    void establish_communication();
     void receive_polling();
 
+    std::string id_, addr_;
+    std::thread recv_polling_;
     zmq::context_t context_;
-    Communication<zmq::socket_t> comm_;
+    zmq::socket_t outsock_;
     size_t ssubcount_, spubcount_, rpubcount_;
     std::map< std::string, PubCallback > callbacks_;
-
-    std::mutex term_mtx_;
-    bool terminated_;
 };
 
 #endif
