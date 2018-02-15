@@ -222,7 +222,7 @@ void Matcher::receive_polling() {
 
             } else if( items[1].revents & ZMQ_POLLIN ) {
                 inside.recv( &zmsg );
-                std::string content( zmsg.data<char>(), zmsg.size() );
+                std::string content( (const char*)zmsg.data(), zmsg.size() );
                 if( content == "*die*" ) break;
                 if( zmsg.size() == 0 )
                     s_sendmore( outside, content );
