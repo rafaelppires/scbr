@@ -24,6 +24,16 @@ The solution for such issue is under development.
 
 [More info](https://arxiv.org/abs/1701.04612)
 
+**Package dependencies:**
+* libzmq3-dev
+* libboost-system-dev
+* libboost-chrono-dev
+* libcrypto++-dev
+
+```
+apt update && apt install -y libzmq3-dev libboost-system-dev libboost-chrono-dev libcrypto++-dev
+```
+
 **Source code:**
 ```
 $ git clone git@gitlab.securecloud.works:rafael.pires/sgx_common.git
