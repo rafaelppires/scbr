@@ -196,7 +196,7 @@ void Matcher::receive_polling() {
     inside.setsockopt( ZMQ_LINGER, &linger, sizeof(linger) );
 
     // bind or connect
-    outside.bind( addr_ );
+    outside.bind( addr_.c_str() );
     inside.connect( "inproc://remote" );
 
     // start polling
@@ -211,7 +211,7 @@ void Matcher::receive_polling() {
                 outside.recv( &zmsg );
                 if( zmsg.size() == 0 ) continue;
                 ++rpubcount_;
-                std::string content(zmsg.data<char>(),zmsg.size());
+                std::string content( (const char*)zmsg.data(),zmsg.size());
                 std::string hash( content.substr(0,32) );
                 content = content.substr(32);
 
