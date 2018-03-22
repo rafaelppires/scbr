@@ -6,6 +6,7 @@
 #include <utils.h>
 #include <fstream>
 #include <communication_zmq.h>
+#include <sgx_utils_rp.h>
 #include <argp.h>
 
 static unsigned subcount = 0;
@@ -38,7 +39,7 @@ void Consumer::subscribe( unsigned long id, const std::string &sub ) {
 //------------------------------------------------------------------------------
 void process_income( const std::string &s ) {
     if( !s.empty() )
-        std::cout << "--> '" << s << "'\n";
+        std::cout << "--> '" << s.substr(32) << "'\n"; // first 32 bytes contain hash of subscription, so that a subscriber can match with one of its requests
 }
 
 //------------------------------------------------------------------------------
@@ -110,14 +111,17 @@ int main(int argc, char **argv) {
 
     zmq::context_t context(1);
 
-    Communication<zmq::socket_t> com( context, args.address, "ConsumerID1" );
+    set_rand_seed();
+    int id = rand()%1000;
+    std::string cid = "ConsumerID" + std::to_string(id);
+    Communication<zmq::socket_t> com( context, args.address, cid );
     Consumer cons( com, args.key );
 
     std::string line;
     while( std::getline( subsfile, line ) ) {
         size_t pos1 = line.find_first_of(' ');
         size_t pos2 = line.find_first_of(' ', pos1+1);
-        line.replace( pos1+1, pos2-pos1-1, "ConsumerID1" );
+        line.replace( pos1+1, pos2-pos1-1, cid );
         cons.subscribe( 12345, line );
     }
 
