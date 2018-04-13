@@ -114,6 +114,8 @@ void ecall_add_evt( const char * buff, size_t len ) {
         return;
     }
     std::string s( (const char*)recovered, sz );
+    if(verbosity > 0)
+        printf("decrypt> '%s'\n", Crypto::printable(s).c_str() );
 #else
     std::string s=rawhdr; 
 #endif
