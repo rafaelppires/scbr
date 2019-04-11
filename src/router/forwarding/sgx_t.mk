@@ -8,7 +8,7 @@ SGX_PRERELEASE ?=1
 SGX_ARCH ?= x64
 SCBR_SRCS=../../src
 CBRPREFILTER_DIR=../matching
-COMMON_SGX=../../../../sgx_common
+COMMON_SGX=../../sgx_common
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -61,7 +61,7 @@ CBR_Enclave_Filter_Include_Paths := -IInclude -Itrusted -I$(SGX_SDK)/include -I$
 Flags_Just_For_C := -Wno-implicit-function-declaration -std=c11
 Common_C_Cpp_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(CBR_Enclave_Filter_Include_Paths) -fno-builtin-printf -I.
 CBR_Enclave_Filter_C_Flags := $(Flags_Just_For_C) $(Common_C_Cpp_Flags)
-CBR_Enclave_Filter_Cpp_Flags :=  $(Common_C_Cpp_Flags) -std=c++11 -nostdinc++ -fno-builtin-printf -I$(CBRPREFILTER_DIR) -I$(COMMON_SGX) -DENCLAVESGX
+CBR_Enclave_Filter_Cpp_Flags :=  $(Common_C_Cpp_Flags) -std=c++11 -nostdinc++ -fno-builtin-printf -I$(CBRPREFILTER_DIR) -I$(COMMON_SGX) -I$(COMMON_SGX)/enclave_include  -DENCLAVESGX
 
 CBR_Enclave_Filter_Cpp_Flags := $(CBR_Enclave_Filter_Cpp_Flags)  -fno-builtin-printf -DENCLAVED
 

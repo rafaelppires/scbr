@@ -1,7 +1,8 @@
 CXX=g++-5
 CXXCFlags=-std=c++17 -g
-
 SGX_SDK := /opt/intel/sgxsdk
+
+include Makefile.in
 
 #DIRS
 OBJDIR  := obj
@@ -11,7 +12,7 @@ OUTDIRS := $(OBJDIR) $(BINDIR) $(LIBDIR)
 
 FORWDIR    := src/router/forwarding
 CLIENTSDIR := src/client-samples
-SGXCOMMDIR := ../sgx_common
+SGXCOMMDIR := src/sgx_common
 
 USERLIBDIR := src/user-library
 USERLIBINC := $(USERLIBDIR)/include
@@ -33,8 +34,7 @@ $(TESTEXECS) : % : $(BINDIR)/%
 SAMPLESDIR      := src/client-samples
 LIBS            := zmq cryptopp m boost_system boost_chrono pthread
 $(addprefix $(BINDIR)/, $(TESTEXECS)): $(BINDIR)/% : $(OBJDIR)/%.o $(USERLIB) | $(BINDIR)
-	@echo "LINK $@ <= $^"
-	@$(CXX) $^ -o $@ $(addprefix -l, $(LIBS))
+	@$(call run_and_test, $(CXX) $^ -o $@ $(addprefix -l, $(LIBS)), "LINK")
 
 ############################## USER LIBRARY
 ULOBJS := message communication_zmq sgx_cryptoall sgx_utils_rp utils scbr_api
@@ -50,19 +50,16 @@ test: tests
 	@timeout 1s $(BINDIR)/user_friendly > /dev/null && echo "PASSED" || echo "FAILED"
 	@killall -9 scbr
 
-INCLUDEDIRS := $(CLIENTSDIR) $(USERLIBDIR)/include $(addprefix src/router/, glue matching) ../sgx_common
+INCLUDEDIRS := $(CLIENTSDIR) $(USERLIBDIR)/include $(addprefix src/router/, glue matching) $(SGXCOMMDIR)
 CLIENTOBJS := $(addsuffix .o, $(TESTEXECS))
 $(addprefix $(OBJDIR)/,$(CLIENTOBJS)) : $(OBJDIR)/%.o : $(CLIENTSDIR)/%.cpp | $(OBJDIR)
-	@echo "CXX $@ <= $^"
-	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
+	@$(call run_and_test, $(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS)), "CXX")
 
 $(OBJDIR)/%.o : $(USERLIBDIR)/src/%.cpp | $(OBJDIR) 
-	@echo "CXX $@ <= $^"
-	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS))
+	@$(call run_and_test, $(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(INCLUDEDIRS)), "CXX")
 
 $(OBJDIR)/%.o: $(SGXCOMMDIR)/%.cpp
-	@echo "CXX $@ <= $^"
-	@$(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(dir $<))
+	@$(call run_and_test, $(CXX) $(CXXCFlags) -c $^ -o $@ $(addprefix -I, $(dir $<)), "CXX")
 
 $(OUTDIRS):
 	@mkdir $@
